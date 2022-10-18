@@ -87,6 +87,8 @@
         "utility": "cpp",
         "stop_token": "cpp",
         "cfenv": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "shared_mutex": "cpp",
+        "strstream": "cpp"
     }
 }

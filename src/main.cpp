@@ -3,7 +3,16 @@
 #include <string> 
 #include <fstream>
 #include <sstream>
+#include <chrono>
+#include <thread>
+
+#include <pcl/io/pcd_io.h>
+#include <pcl/point_types.h>
+#include <pcl/visualization/cloud_viewer.h>
+
 #include "main.h"
+
+using namespace std::chrono_literals;
 
 int main(int argc, char** argv) {
 
@@ -68,15 +77,15 @@ int main(int argc, char** argv) {
   cv::Mat dp_disparities = cv::Mat::zeros(height, width, CV_8UC1);
   cv::Mat opencv_disparities = cv::Mat::zeros(height, width, CV_8UC1);
 
-  StereoEstimation_Naive(
-    window_size, dmin, height, width,
-    r_image, l_image,
-    naive_disparities);
+  // StereoEstimation_Naive(
+  //   window_size, dmin, height, width,
+  //   r_image, l_image,
+  //   naive_disparities);
 
-  StereoEstimation_DP(
-    window_size, dmin, height, width, lambda,
-    r_image, l_image,
-    dp_disparities);
+  // StereoEstimation_DP(
+  //   window_size, dmin, height, width, lambda,
+  //   r_image, l_image,
+  //   dp_disparities);
 
   StereoEstimation_OpenCV(
     window_size, dmin,
@@ -88,16 +97,16 @@ int main(int argc, char** argv) {
   ////////////
 
   // reconstruction Naive
-  Disparity2PointCloud(
-    output_file + "_naive",
-    height, width, naive_disparities,
-    window_size, dmin, baseline, focal_length);
+  // Disparity2PointCloud(
+  //   output_file + "_naive",
+  //   height, width, naive_disparities,
+  //   window_size, dmin, baseline, focal_length);
 
-  // reconstruction DP
-  Disparity2PointCloud(
-    output_file + "_dp",
-    height, width, dp_disparities,
-    window_size, dmin, baseline, focal_length);
+  // // reconstruction DP
+  // Disparity2PointCloud(
+  //   output_file + "_dp",
+  //   height, width, dp_disparities,
+  //   window_size, dmin, baseline, focal_length);
 
   // reconstruction OpenCV
   Disparity2PointCloud(
@@ -106,38 +115,38 @@ int main(int argc, char** argv) {
     window_size, dmin, baseline, focal_length);
 
   // save / display images
-  std::stringstream out1;
-  out1 << output_file << "_naive.png";
-  cv::imwrite(out1.str(), naive_disparities);
+  // std::stringstream out1;
+  // out1 << output_file << "_naive.png";
+  // cv::imwrite(out1.str(), naive_disparities);
 
-  std::stringstream out2;
-  out2 << output_file << "_dp.png";  
-  cv::imwrite(out2.str(), dp_disparities);
+  // std::stringstream out2;
+  // out2 << output_file << "_dp.png";  
+  // cv::imwrite(out2.str(), dp_disparities);
 
   std::stringstream out3;
   out3 << output_file << "_opencv.png";
   cv::imwrite(out3.str(), opencv_disparities);
 
   // Compare and get similarity measures
-  cv::Mat mad_naive = mad(naive_disparities, gt);
-  std::cout << cv::mean(mad_naive) << std::endl;
-  cv::imwrite("mad_naive.png", mad_naive);
-  cv::Mat sad_naive = ssd(naive_disparities, gt);
-  std::cout << cv::mean(sad_naive) << std::endl;
-  cv::imwrite("sad_naive.png", sad_naive);
-  cv::Mat ssim_naive = MSSIM(naive_disparities, gt);
-  std::cout << cv::mean(ssim_naive) << std::endl;
-  cv::imwrite("ssim_naive.png", ssim_naive);
+  // cv::Mat mad_naive = mad(naive_disparities, gt);
+  // std::cout << cv::mean(mad_naive) << std::endl;
+  // cv::imwrite("mad_naive.png", mad_naive);
+  // cv::Mat sad_naive = ssd(naive_disparities, gt);
+  // std::cout << cv::mean(sad_naive) << std::endl;
+  // cv::imwrite("sad_naive.png", sad_naive);
+  // cv::Mat ssim_naive = MSSIM(naive_disparities, gt);
+  // std::cout << cv::mean(ssim_naive) << std::endl;
+  // cv::imwrite("ssim_naive.png", ssim_naive);
 
-  cv::Mat mad_dp = mad(dp_disparities, gt);
-  std::cout << cv::mean(mad_dp) << std::endl;
-  cv::imwrite("mad_dp.png", mad_dp);
-  cv::Mat sad_dp = ssd(dp_disparities, gt);
-  std::cout << cv::mean(sad_dp) << std::endl;
-  cv::imwrite("sad_dp.png", sad_dp);
-  cv::Mat ssim_dp = MSSIM(dp_disparities, gt);
-  std::cout << cv::mean(ssim_dp) << std::endl;
-  cv::imwrite("ssim_dp.png", ssim_dp);
+  // cv::Mat mad_dp = mad(dp_disparities, gt);
+  // std::cout << cv::mean(mad_dp) << std::endl;
+  // cv::imwrite("mad_dp.png", mad_dp);
+  // cv::Mat sad_dp = ssd(dp_disparities, gt);
+  // std::cout << cv::mean(sad_dp) << std::endl;
+  // cv::imwrite("sad_dp.png", sad_dp);
+  // cv::Mat ssim_dp = MSSIM(dp_disparities, gt);
+  // std::cout << cv::mean(ssim_dp) << std::endl;
+  // cv::imwrite("ssim_dp.png", ssim_dp);
 
   cv::Mat mad_opencv = mad(opencv_disparities, gt);
   std::cout << cv::mean(mad_opencv) << std::endl;
@@ -407,6 +416,20 @@ cv::Mat MSSIM(const cv::Mat& i1, const cv::Mat& i2)
     return ssim_map;
 }
 
+pcl::visualization::PCLVisualizer::Ptr simpleVis (pcl::PointCloud<pcl::PointXYZ>::ConstPtr cloud)
+{
+  // --------------------------------------------
+  // -----Open 3D viewer and add point cloud-----
+  // --------------------------------------------
+  pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
+  viewer->setBackgroundColor (0, 0, 0);
+  viewer->addPointCloud<pcl::PointXYZ> (cloud, "sample cloud");
+  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "sample cloud");
+  viewer->addCoordinateSystem (1.0);
+  viewer->initCameraParameters ();
+  return (viewer);
+}
+
 void Disparity2PointCloud(
   const std::string& output_file,
   int height, int width, cv::Mat& disparities,
@@ -416,7 +439,10 @@ void Disparity2PointCloud(
   std::stringstream out3d;
   out3d << output_file << ".xyz";
   std::ofstream outfile(out3d.str());
-  for (int i = 0; i < height - window_size; ++i) 
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+
+  for (int i = 0; i < height - window_size; ++i)
   {
     std::cout << "Reconstructing 3D point cloud from disparities... " << std::ceil(((i) / static_cast<double>(height - window_size + 1)) * 100) << "%\r" << std::flush;
     for (int j = 0; j < width - window_size; ++j) 
@@ -434,11 +460,28 @@ void Disparity2PointCloud(
       const double Y = baseline*(v)/d;
 	  
       outfile << X << " " << Y << " " << Z << std::endl;
+
+      // populate the cloud
+      pcl::PointXYZ basic_point;
+      basic_point.x = X;
+      basic_point.y = Y;
+      basic_point.z = Z;
+      cloud->points.push_back(basic_point);
     }
   }
 
   std::cout << "Reconstructing 3D point cloud from disparities... Done.\r" << std::flush;
   std::cout << std::endl;
+
+  cloud->width = cloud->size ();
+  cloud->height = 1;
+
+  pcl::visualization::PCLVisualizer::Ptr viewer = simpleVis(cloud);
+  while (!viewer->wasStopped())
+  {
+    viewer->spinOnce (100);
+    std::this_thread::sleep_for(100ms);
+  }
 }
 
 // compute similarity metrics between the ground truth disparity provided in the middlebury dataset and the one that you computed
