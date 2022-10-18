@@ -26,6 +26,8 @@ cv::Mat ssd(const cv::Mat& disp_est, const cv::Mat& disp_gt);
 
 cv::Mat MSSIM(const cv::Mat& i1, const cv::Mat& i2);
 
+pcl::visualization::PCLVisualizer::Ptr simpleVis (pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud, pcl::PointCloud<pcl::Normal>::ConstPtr normals);
+
 void Disparity2PointCloud(
   const std::string& output_file,
   int height, int width, cv::Mat& disparities,

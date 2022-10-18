@@ -16,7 +16,7 @@ set(VTK_DIR /opt/homebrew/Cellar/vtk/9.2.2/lib/cmake/vtk-9.2)
 find_package(VTK REQUIRED)
 include(${VTK_USE_FILE})
 
-find_package(PCL 1.3 REQUIRED COMPONENTS common io VISUALIZATION)
+find_package(PCL 1.3 REQUIRED COMPONENTS common io VISUALIZATION features)
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
