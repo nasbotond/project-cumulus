@@ -28,7 +28,7 @@ cv::Mat MSSIM(const cv::Mat& i1, const cv::Mat& i2);
 
 pcl::visualization::PCLVisualizer::Ptr pointCloudVisualization (pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud, pcl::PointCloud<pcl::Normal>::ConstPtr normals);
 
-// void getNormalVectors(std::vector<cv::Point3f>& points, std::vector<cv::Point3f>& normals)
+void getNormalVectors(cv::Mat& points, cv::Mat& normals);
 
 void writePLY(const std::string& output_file, cv::Mat points, cv::Mat normals, cv::Mat colors);
 

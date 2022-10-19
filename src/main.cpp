@@ -43,7 +43,7 @@ int main(int argc, char** argv)
     return 1;
   }
 
-  cv::Mat l_image_color = cv::imread(argv[2], cv::IMREAD_COLOR);
+  cv::Mat image_color = cv::imread(argv[2], cv::IMREAD_COLOR);
 
   cv::Mat l_image = cv::imread(argv[1], cv::IMREAD_GRAYSCALE);
   cv::Mat r_image = cv::imread(argv[2], cv::IMREAD_GRAYSCALE);
@@ -85,15 +85,15 @@ int main(int argc, char** argv)
   cv::Mat dp_disparities = cv::Mat::zeros(height, width, CV_8UC1);
   cv::Mat opencv_disparities = cv::Mat::zeros(height, width, CV_8UC1);
 
-  // StereoEstimation_Naive(
-  //   window_size, dmin, height, width,
-  //   r_image, l_image,
-  //   naive_disparities);
+  StereoEstimation_Naive(
+    window_size, dmin, height, width,
+    r_image, l_image,
+    naive_disparities);
 
-  // StereoEstimation_DP(
-  //   window_size, dmin, height, width, lambda,
-  //   r_image, l_image,
-  //   dp_disparities);
+  StereoEstimation_DP(
+    window_size, dmin, height, width, lambda,
+    r_image, l_image,
+    dp_disparities);
 
   StereoEstimation_OpenCV(
     window_size, dmin,
@@ -104,57 +104,39 @@ int main(int argc, char** argv)
   // Output //
   ////////////
 
-  // reconstruction Naive
-  // Disparity2PointCloud(
-  //   output_file + "_naive",
-  //   height, width, naive_disparities,
-  //   window_size, dmin, baseline, focal_length);
-
-  // // reconstruction DP
-  // Disparity2PointCloud(
-  //   output_file + "_dp",
-  //   height, width, dp_disparities,
-  //   window_size, dmin, baseline, focal_length);
-
-  // reconstruction OpenCV
-  Disparity2PointCloud(
-    output_file + "_opencv",
-    height, width, opencv_disparities,
-    window_size, dmin, baseline, focal_length, l_image_color);
-
   // save / display images
-  // std::stringstream out1;
-  // out1 << output_file << "_naive.png";
-  // cv::imwrite(out1.str(), naive_disparities);
+  std::stringstream out1;
+  out1 << output_file << "_naive.png";
+  cv::imwrite(out1.str(), naive_disparities);
 
-  // std::stringstream out2;
-  // out2 << output_file << "_dp.png";  
-  // cv::imwrite(out2.str(), dp_disparities);
+  std::stringstream out2;
+  out2 << output_file << "_dp.png";  
+  cv::imwrite(out2.str(), dp_disparities);
 
   std::stringstream out3;
   out3 << output_file << "_opencv.png";
   cv::imwrite(out3.str(), opencv_disparities);
 
   // Compare and get similarity measures
-  // cv::Mat mad_naive = mad(naive_disparities, gt);
-  // std::cout << cv::mean(mad_naive) << std::endl;
-  // cv::imwrite("mad_naive.png", mad_naive);
-  // cv::Mat sad_naive = ssd(naive_disparities, gt);
-  // std::cout << cv::mean(sad_naive) << std::endl;
-  // cv::imwrite("sad_naive.png", sad_naive);
-  // cv::Mat ssim_naive = MSSIM(naive_disparities, gt);
-  // std::cout << cv::mean(ssim_naive) << std::endl;
-  // cv::imwrite("ssim_naive.png", ssim_naive);
+  cv::Mat mad_naive = mad(naive_disparities, gt);
+  std::cout << cv::mean(mad_naive) << std::endl;
+  cv::imwrite("mad_naive.png", mad_naive);
+  cv::Mat sad_naive = ssd(naive_disparities, gt);
+  std::cout << cv::mean(sad_naive) << std::endl;
+  cv::imwrite("sad_naive.png", sad_naive);
+  cv::Mat ssim_naive = MSSIM(naive_disparities, gt);
+  std::cout << cv::mean(ssim_naive) << std::endl;
+  cv::imwrite("ssim_naive.png", ssim_naive);
 
-  // cv::Mat mad_dp = mad(dp_disparities, gt);
-  // std::cout << cv::mean(mad_dp) << std::endl;
-  // cv::imwrite("mad_dp.png", mad_dp);
-  // cv::Mat sad_dp = ssd(dp_disparities, gt);
-  // std::cout << cv::mean(sad_dp) << std::endl;
-  // cv::imwrite("sad_dp.png", sad_dp);
-  // cv::Mat ssim_dp = MSSIM(dp_disparities, gt);
-  // std::cout << cv::mean(ssim_dp) << std::endl;
-  // cv::imwrite("ssim_dp.png", ssim_dp);
+  cv::Mat mad_dp = mad(dp_disparities, gt);
+  std::cout << cv::mean(mad_dp) << std::endl;
+  cv::imwrite("mad_dp.png", mad_dp);
+  cv::Mat sad_dp = ssd(dp_disparities, gt);
+  std::cout << cv::mean(sad_dp) << std::endl;
+  cv::imwrite("sad_dp.png", sad_dp);
+  cv::Mat ssim_dp = MSSIM(dp_disparities, gt);
+  std::cout << cv::mean(ssim_dp) << std::endl;
+  cv::imwrite("ssim_dp.png", ssim_dp);
 
   cv::Mat mad_opencv = mad(opencv_disparities, gt);
   std::cout << cv::mean(mad_opencv) << std::endl;
@@ -165,6 +147,26 @@ int main(int argc, char** argv)
   cv::Mat ssim_opencv = MSSIM(opencv_disparities, gt);
   std::cout << cv::mean(ssim_opencv) << std::endl;
   cv::imwrite("ssim_opencv.png", ssim_opencv);
+
+  // reconstruction Naive
+  Disparity2PointCloud(
+    output_file + "_naive",
+    height, width, naive_disparities,
+    window_size, dmin, baseline, focal_length, image_color);
+
+  // reconstruction DP
+  Disparity2PointCloud(
+    output_file + "_dp",
+    height, width, dp_disparities,
+    window_size, dmin, baseline, focal_length, image_color);
+
+  // reconstruction OpenCV
+  Disparity2PointCloud(
+    output_file + "_opencv",
+    height, width, opencv_disparities,
+    window_size, dmin, baseline, focal_length, image_color);
+
+
 
   // cv::namedWindow("DP", cv::WINDOW_AUTOSIZE);
   // cv::imshow("DP", dp_disparities);
@@ -436,74 +438,72 @@ pcl::visualization::PCLVisualizer::Ptr pointCloudVisualization (pcl::PointCloud<
   return (viewer);
 }
 
-// void getNormalVectors(std::vector<cv::Point3f>& points, std::vector<cv::Point3f>& normals)
-// {
-//   int hw = 3/2;
-//   for(int i = 0; i < points.size(); ++i)
-//   {
-//     normals.push_back(cv::Point3f(0,0,0));
-//   }
+void getNormalVectors(cv::Mat& points, cv::Mat& normals)
+{
+  int hw = 3/2;
 
-//   for(int i = hw; i < points.size(); ++i)
-//   {
-//     std::vector<cv::Point3f> pts;    
-//     for(int a = -hw; a <= hw; ++a)
-//     {
-//       pts.push_back(points.at<cv::Point3f>(i + (a*width) - a));
-//       pts.push_back(points.at<cv::Point3f>(i + (a*width)));
-//       pts.push_back(points.at<cv::Point3f>(i + (a*width) + a));
-//     }
-    
-//     int num = pts.size();
+  for(int i = hw; i < points.rows - hw; ++i)
+  {
+    for(int j = hw; j < points.cols - hw; ++j)
+    {
 
-//     // find center of gravity
-//     cv::Point3d t(0.0, 0.0, 0.0);
+      std::vector<cv::Point3f> pts;
+      for(int a = -hw; a <= hw; ++a)
+      {
+        for(int b = -hw; b <= hw; ++b)
+        {
+          cv::Point3f point;
+          point.x = static_cast<float>(points.at<cv::Vec3f>(i+a, j+b)[0]);
+          point.y = static_cast<float>(points.at<cv::Vec3f>(i+a, j+b)[1]);
+          point.z = static_cast<float>(points.at<cv::Vec3f>(i+a, j+b)[2]);
 
-//     for (int idx = 0; idx < num; idx++)
-//     {
-//         t.x += pts.at(idx).x;
-//         t.y += pts.at(idx).y;
-//         t.z += pts.at(idx).z;
-//     }
+          pts.push_back(point);
+        }
+      }
+      
+      int num = pts.size();
 
-//     t.x = t.x / num;
-//     t.y = t.y / num;
-//     t.z = t.z / num;
+      // find center of gravity
+      cv::Point3d t(0.0, 0.0, 0.0);
 
-//     // X*l = 0 (homogenous equation)
-//     cv::Mat X(num, 3, CV_32F);
+      for (int idx = 0; idx < num; idx++)
+      {
+          t.x += pts.at(idx).x;
+          t.y += pts.at(idx).y;
+          t.z += pts.at(idx).z;
+      }
 
-//     // get matrix X
-//     for (int idx = 0; idx < num; idx++)
-//     {
-//         cv::Point3d pt = pts.at(idx);
-//         X.at<float>(idx, 0) = pt.x - t.x;
-//         X.at<float>(idx, 1) = pt.y - t.y;
-//         X.at<float>(idx, 2) = pt.z - t.z;
-//     }
+      t.x = t.x / num;
+      t.y = t.y / num;
+      t.z = t.z / num;
 
-//     // normal vector l -> eigenvector of X^T X corresponding to the least eigenvalues
+      // X*l = 0 (homogenous equation)
+      cv::Mat X(num, 3, CV_32F);
 
-//     cv::Mat mtx = X.t() * X;
-//     cv::Mat evals, evecs;
+      // get matrix X
+      for (int idx = 0; idx < num; idx++)
+      {
+          cv::Point3d pt = pts.at(idx);
+          X.at<float>(idx, 0) = pt.x - t.x;
+          X.at<float>(idx, 1) = pt.y - t.y;
+          X.at<float>(idx, 2) = pt.z - t.z;
+      }
 
-//     cv::eigen(mtx, evals, evecs);
+      // normal vector l -> eigenvector of X^T X corresponding to the least eigenvalues
 
-//     float A = evecs.at<float>(2, 0);
-//     float B = evecs.at<float>(2, 1);
-//     float C = evecs.at<float>(2, 2);
+      cv::Mat mtx = X.t() * X;
+      cv::Mat evals, evecs;
 
-//     float* ret = new float[4];
+      cv::eigen(mtx, evals, evecs);
 
-//     // A, B, C are the normal vector to the plane
-//     // D = Ax + By + Cz
-//     ret[0] = A;
-//     ret[1] = B;
-//     ret[2] = C;
-//     ret[3] = -(A*t.x + B*t.y + C*t.z);
+      float A = evecs.at<float>(2, 0);
+      float B = evecs.at<float>(2, 1);
+      float C = evecs.at<float>(2, 2);
 
-//   }
-// }
+      normals.at<cv::Vec3f>(i, j) = C > 0 ? cv::Vec3f(A, B, -C) : cv::Vec3f(A, B, C);
+    }
+  }
+}
 
 void writePLY(const std::string& output_file, cv::Mat points, cv::Mat normals, cv::Mat colors)
 {
@@ -547,7 +547,7 @@ void Disparity2PointCloud(
   const std::string& output_file,
   int height, int width, cv::Mat& disparities,
   const int& window_size,
-  const int& dmin, const double& baseline, const double& focal_length, cv::Mat& l_image_color)
+  const int& dmin, const double& baseline, const double& focal_length, cv::Mat& image_color)
 {
   cv::Mat pointsMat = cv::Mat(height - window_size, width - window_size, CV_32FC3, cv::Scalar(0.,0.,0.));
   cv::Mat colorsMat = cv::Mat(height - window_size, width - window_size, CV_8UC3, cv::Scalar(0,0,0));
@@ -573,10 +573,9 @@ void Disparity2PointCloud(
       const double Y = baseline*(v)/d;
 
       pointsMat.at<cv::Vec3f>(i, j) = cv::Vec3f(X, Y, Z);
-      // normalsMat.at<cv::Vec3f>(i, j) = cv::Vec3f(X, Y, Z);
-      colorsMat.at<cv::Vec3b>(i, j) = l_image_color.at<cv::Vec3b>(i, j);
-
-      cv::Vec3b color = l_image_color.at<cv::Vec3b>(i, j);
+      // normalsMat.at<cv::Vec3f>(i, j) = cv::Vec3f(X, Y, Z);  
+      cv::Vec3b color = image_color.at<cv::Vec3b>(i, j);
+      colorsMat.at<cv::Vec3b>(i, j) = cv::Vec3b(color.val[2], color.val[1], color.val[0]);
 
       // populate the cloud
       pcl::PointXYZRGB basic_point;
@@ -593,6 +592,8 @@ void Disparity2PointCloud(
   std::cout << "Reconstructing 3D point cloud from disparities... Done.\r" << std::flush;
   std::cout << std::endl;
 
+  getNormalVectors(pointsMat, normalsMat);
+
   cloud->width = cloud->size ();
   cloud->height = 1;
 
@@ -601,7 +602,7 @@ void Disparity2PointCloud(
   pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB> ());
   ne.setSearchMethod (tree);
   pcl::PointCloud<pcl::Normal>::Ptr cloud_normals1 (new pcl::PointCloud<pcl::Normal>);
-  ne.setRadiusSearch (.5);
+  ne.setRadiusSearch (5);
   ne.compute (*cloud_normals1);
   
   writePLY(output_file, pointsMat, normalsMat, colorsMat);
