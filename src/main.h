@@ -28,6 +28,10 @@ cv::Mat MSSIM(const cv::Mat& i1, const cv::Mat& i2);
 
 pcl::visualization::PCLVisualizer::Ptr pointCloudVisualization (pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud, pcl::PointCloud<pcl::Normal>::ConstPtr normals);
 
+void writePLY(const std::string& output_file, std::vector<cv::Point3f> points, std::vector<cv::Point3f> normals, std::vector<cv::Point3i> colors);
+
+// float* EstimatePlaneOptimal(vector<Point3f>);
+
 void Disparity2PointCloud(
   const std::string& output_file,
   int height, int width, cv::Mat& disparities,

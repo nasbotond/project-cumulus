@@ -1,10 +1,12 @@
-#include <opencv2/opencv.hpp>
+#include "opencv2/opencv.hpp"
+#include <opencv2/imgproc.hpp>
 #include <iostream>
 #include <string> 
 #include <fstream>
 #include <sstream>
 #include <chrono>
 #include <thread>
+#include <vector>
 
 #include <pcl/point_types.h>
 #include <pcl/features/normal_3d.h>
@@ -13,6 +15,7 @@
 #include <pcl/console/parse.h>
 
 #include "main.h"
+// #include "ply_writer.h"
 
 using namespace std::chrono_literals;
 
@@ -433,15 +436,102 @@ pcl::visualization::PCLVisualizer::Ptr pointCloudVisualization (pcl::PointCloud<
   return (viewer);
 }
 
+// void getNormalVectors(vector<cv::Point3f> pts)
+// {
+//     int num = pts.size();
+
+//     // find center of gravity
+//     cv::Point3d t(0.0, 0.0, 0.0);
+
+//     for (int idx = 0; idx < num; idx++)
+//     {
+//         t.x += pts.at(idx).x;
+//         t.y += pts.at(idx).y;
+//         t.z += pts.at(idx).z;
+//     }
+
+//     t.x = t.x / num;
+//     t.y = t.y / num;
+//     t.z = t.z / num;
+
+//     // X*l = 0 (homogenous equation)
+//     cv::Mat X(num, 3, CV_32F);
+
+//     // get matrix X
+//     for (int idx = 0; idx < num; idx++)
+//     {
+//         cv::Point3d pt = pts.at(idx);
+//         X.at<float>(idx, 0) = pt.x - t.x;
+//         X.at<float>(idx, 1) = pt.y - t.y;
+//         X.at<float>(idx, 2) = pt.z - t.z;
+//     }
+
+//     // normal vector l -> eigenvector of X^T X corresponding to the least eigenvalues
+
+//     cv::Mat mtx = X.t() * X;
+//     cv::Mat evals, evecs;
+
+//     cv::eigen(mtx, evals, evecs);
+
+//     float A = evecs.at<float>(2, 0);
+//     float B = evecs.at<float>(2, 1);
+//     float C = evecs.at<float>(2, 2);
+
+//     float* ret = new float[4];
+
+//     // A, B, C are the normal vector to the plane
+//     // D = Ax + By + Cz
+//     ret[0] = A;
+//     ret[1] = B;
+//     ret[2] = C;
+//     ret[3] = -(A*t.x + B*t.y + C*t.z);
+
+//     return ret;
+// }
+
+void writePLY(const std::string& output_file, std::vector<cv::Point3f> points, std::vector<cv::Point3f> normals, std::vector<cv::Point3i> colors)
+{
+    int num = points.size();
+
+    std::stringstream out3d;
+    out3d << output_file << ".ply";
+    std::ofstream outfile(out3d.str());
+    
+    outfile <<"ply\n";
+    outfile <<"format ascii 1.0\n";
+    outfile <<"element vertex "<< num <<std::endl;
+    outfile <<"property float x\n";
+    outfile <<"property float y\n";
+    outfile <<"property float z\n";
+    outfile <<"property float nx\n";
+    outfile <<"property float ny\n";
+    outfile <<"property float nz\n";
+    outfile <<"property uchar red\n";
+    outfile <<"property uchar green\n";
+    outfile <<"property uchar blue\n";
+    outfile <<"end_header\n";    
+    
+    for (int idx=0; idx<num; idx++)
+    {
+        cv::Point3f point=points.at(idx);
+        cv::Point3f normal=normals.at(idx);
+        cv::Point3i color=colors.at(idx);
+        
+        outfile <<point.x << " " << point.y << " " << point.z << " " << normal.x << " " << normal.y << " " << normal.z << " " << color.x << " " << color.y << " " <<color.z <<std::endl;        
+    }
+        
+    outfile.close();
+}
+
 void Disparity2PointCloud(
   const std::string& output_file,
   int height, int width, cv::Mat& disparities,
   const int& window_size,
   const int& dmin, const double& baseline, const double& focal_length, cv::Mat& l_image_color)
 {
-  std::stringstream out3d;
-  out3d << output_file << ".xyz";
-  std::ofstream outfile(out3d.str());
+  std::vector<cv::Point3f> points;
+  std::vector<cv::Point3i> colors;
+  std::vector<cv::Point3f> normals;
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
 
@@ -461,10 +551,26 @@ void Disparity2PointCloud(
       const double Z = (baseline*focal_length)/d;
       const double X = -1*(baseline*(u1+u2))/(2*d);
       const double Y = baseline*(v)/d;
-	  
-      outfile << X << " " << Y << " " << Z << std::endl;
+
+      cv::Point3f point;
+      point.x = X;
+      point.y = Y;
+      point.z = Z;
+      points.push_back(point);
+
+      cv::Point3f normal;
+      normal.x = 0;
+      normal.y = 0;
+      normal.z = 0;
+      normals.push_back(normal);
 
       cv::Vec3b color = l_image_color.at<cv::Vec3b>(i, j);
+      cv::Point3i c;
+      c.x = color.val[2];
+      c.y = color.val[1];
+      c.z = color.val[0];
+      colors.push_back(c);
+
       // populate the cloud
       pcl::PointXYZRGB basic_point;
       basic_point.x = X;
@@ -490,6 +596,8 @@ void Disparity2PointCloud(
   pcl::PointCloud<pcl::Normal>::Ptr cloud_normals1 (new pcl::PointCloud<pcl::Normal>);
   ne.setRadiusSearch (.5);
   ne.compute (*cloud_normals1);
+  
+  writePLY(output_file, points, normals, colors);
 
   pcl::visualization::PCLVisualizer::Ptr viewer = pointCloudVisualization(cloud, cloud_normals1);
   while (!viewer->wasStopped())
