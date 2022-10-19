@@ -16,7 +16,8 @@
 
 using namespace std::chrono_literals;
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) 
+{
 
   ////////////////
   // Parameters //
@@ -38,6 +39,8 @@ int main(int argc, char** argv) {
     std::cerr << "Usage: " << argv[0] << " LEFT_IMAGE RIGHT_IMAGE GT_IMAGE OUTPUT_FILE WINDOW_SIZE LAMBDA DMIN" << std::endl;
     return 1;
   }
+
+  cv::Mat l_image_color = cv::imread(argv[2], cv::IMREAD_COLOR);
 
   cv::Mat l_image = cv::imread(argv[1], cv::IMREAD_GRAYSCALE);
   cv::Mat r_image = cv::imread(argv[2], cv::IMREAD_GRAYSCALE);
@@ -114,7 +117,7 @@ int main(int argc, char** argv) {
   Disparity2PointCloud(
     output_file + "_opencv",
     height, width, opencv_disparities,
-    window_size, dmin, baseline, focal_length);
+    window_size, dmin, baseline, focal_length, l_image_color);
 
   // save / display images
   // std::stringstream out1;
@@ -418,11 +421,8 @@ cv::Mat MSSIM(const cv::Mat& i1, const cv::Mat& i2)
     return ssim_map;
 }
 
-pcl::visualization::PCLVisualizer::Ptr simpleVis (pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud, pcl::PointCloud<pcl::Normal>::ConstPtr normals)
+pcl::visualization::PCLVisualizer::Ptr pointCloudVisualization (pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud, pcl::PointCloud<pcl::Normal>::ConstPtr normals)
 {
-  // --------------------------------------------
-  // -----Open 3D viewer and add point cloud-----
-  // --------------------------------------------
   pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
   viewer->setBackgroundColor (0, 0, 0);
   viewer->addPointCloud<pcl::PointXYZRGB> (cloud, "sample cloud");
@@ -437,14 +437,13 @@ void Disparity2PointCloud(
   const std::string& output_file,
   int height, int width, cv::Mat& disparities,
   const int& window_size,
-  const int& dmin, const double& baseline, const double& focal_length)
+  const int& dmin, const double& baseline, const double& focal_length, cv::Mat& l_image_color)
 {
   std::stringstream out3d;
   out3d << output_file << ".xyz";
   std::ofstream outfile(out3d.str());
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
-  std::uint8_t r(255), g(15), b(15);
 
   for (int i = 0; i < height - window_size; ++i)
   {
@@ -465,14 +464,15 @@ void Disparity2PointCloud(
 	  
       outfile << X << " " << Y << " " << Z << std::endl;
 
+      cv::Vec3b color = l_image_color.at<cv::Vec3b>(i, j);
       // populate the cloud
       pcl::PointXYZRGB basic_point;
       basic_point.x = X;
       basic_point.y = Y;
       basic_point.z = Z;
-      std::uint32_t rgb = (static_cast<std::uint32_t>(r) << 16 |
-              static_cast<std::uint32_t>(g) << 8 | static_cast<std::uint32_t>(b));
-      basic_point.rgb = *reinterpret_cast<float*>(&rgb);
+      basic_point.r = color.val[2];
+      basic_point.g = color.val[1];
+      basic_point.b = color.val[0];
       cloud->points.push_back(basic_point);
     }
   }
@@ -488,10 +488,10 @@ void Disparity2PointCloud(
   pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB> ());
   ne.setSearchMethod (tree);
   pcl::PointCloud<pcl::Normal>::Ptr cloud_normals1 (new pcl::PointCloud<pcl::Normal>);
-  ne.setRadiusSearch (5);
+  ne.setRadiusSearch (.5);
   ne.compute (*cloud_normals1);
 
-  pcl::visualization::PCLVisualizer::Ptr viewer = simpleVis(cloud, cloud_normals1);
+  pcl::visualization::PCLVisualizer::Ptr viewer = pointCloudVisualization(cloud, cloud_normals1);
   while (!viewer->wasStopped())
   {
     viewer->spinOnce (100);
