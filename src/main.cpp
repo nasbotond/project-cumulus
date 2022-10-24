@@ -26,18 +26,15 @@ int main(int argc, char** argv)
   ////////////////
 
   // camera setup parameters
-  const double focal_length = 3740; // pixels 1247;
-  const double baseline = 160; // mm 213;
-
-  // stereo estimation parameters
-  // const int dmin = 150; // 67; //230;
-  // const int window_size = 3;
+  const double focal_length = 3740;
+  const double baseline = 160;
 
   ///////////////////////////
   // Commandline arguments //
   ///////////////////////////
 
-  if (argc < 8) {
+  if (argc < 8) 
+  {
     std::cerr << "Usage: " << argv[0] << " LEFT_IMAGE RIGHT_IMAGE GT_IMAGE OUTPUT_FILE WINDOW_SIZE LAMBDA DMIN" << std::endl;
     return 1;
   }
@@ -52,12 +49,14 @@ int main(int argc, char** argv)
   const int lambda = atoi(argv[6]);
   const int dmin = atoi(argv[7]);
 
-  if (!r_image.data) {
+  if (!r_image.data) 
+  {
     std::cerr << "No r_image data" << std::endl;
     return EXIT_FAILURE;
   }
 
-  if (!l_image.data) {
+  if (!l_image.data) 
+  {
     std::cerr << "No l_image data" << std::endl;
     return EXIT_FAILURE;
   }
@@ -78,8 +77,7 @@ int main(int argc, char** argv)
   // Reconstruction //
   ////////////////////
 
-  // Naive disparity image
-  //cv::Mat naive_disparities = cv::Mat::zeros(height - window_size, width - window_size, CV_8UC1);
+  // disparity images
   cv::Mat naive_disparities = cv::Mat::zeros(height, width, CV_8UC1);
   cv::Mat dp_disparities = cv::Mat::zeros(height, width, CV_8UC1);
   cv::Mat opencv_disparities = cv::Mat::zeros(height, width, CV_8UC1);
@@ -120,84 +118,50 @@ int main(int argc, char** argv)
 
   // save / display images
   std::stringstream outNaive;
-  outNaive << output_file << "_naive.png";
-  cv::imwrite(outNaive.str(), naive_disparities);
+  outNaive << output_file << "_naive";
+  cv::imwrite(outNaive.str()+"_disp.png", naive_disparities);
 
   std::stringstream outDP;
-  outDP << output_file << "_dp.png";
-  cv::imwrite(outDP.str(), dp_disparities);
+  outDP << output_file << "_dp";
+  cv::imwrite(outDP.str()+"_disp.png", dp_disparities);
 
   std::stringstream outOpenCV;
-  outOpenCV << output_file << "_opencv.png";
-  cv::imwrite(outOpenCV.str(), opencv_disparities);
+  outOpenCV << output_file << "_opencv";
+  cv::imwrite(outOpenCV.str()+"_disp.png", opencv_disparities);
 
-  // Compare and get similarity measures
-  cv::Mat mad_naive = MAD(naive_disparities, gt);
-  std::cout << cv::mean(mad_naive) << std::endl;
-  cv::imwrite("mad_naive.png", mad_naive);
-  cv::Mat sad_naive = SAD(naive_disparities, gt);
-  std::cout << cv::mean(sad_naive) << std::endl;
-  cv::imwrite("sad_naive.png", sad_naive);
-  cv::Mat ssim_naive = MSSIM(naive_disparities, gt);
-  std::cout << cv::mean(ssim_naive) << std::endl;
-  cv::imwrite("ssim_naive.png", ssim_naive);
-  cv::Mat ncc_naive = NCC(naive_disparities, gt);
-  std::cout << cv::mean(ncc_naive) << std::endl;
+  // compare and get similarity measures
+  MAD(naive_disparities, gt, outNaive.str());
+  SAD(naive_disparities, gt, outNaive.str());
+  MSSIM(naive_disparities, gt, outNaive.str());
+  NCC(naive_disparities, gt);
 
-  cv::Mat mad_dp = MAD(dp_disparities, gt);
-  std::cout << cv::mean(mad_dp) << std::endl;
-  cv::imwrite("mad_dp.png", mad_dp);
-  cv::Mat sad_dp = SAD(dp_disparities, gt);
-  std::cout << cv::mean(sad_dp) << std::endl;
-  cv::imwrite("sad_dp.png", sad_dp);
-  cv::Mat ssim_dp = MSSIM(dp_disparities, gt);
-  std::cout << cv::mean(ssim_dp) << std::endl;
-  cv::imwrite("ssim_dp.png", ssim_dp);
-  cv::Mat ncc_dp = NCC(dp_disparities, gt);
-  std::cout << cv::mean(ncc_dp) << std::endl;
+  MAD(dp_disparities, gt, outDP.str());
+  SAD(dp_disparities, gt, outDP.str());
+  MSSIM(dp_disparities, gt, outDP.str());
+  NCC(dp_disparities, gt);
 
-  cv::Mat mad_opencv = MAD(opencv_disparities, gt);
-  std::cout << cv::mean(mad_opencv) << std::endl;
-  cv::imwrite("mad_opencv.png", mad_opencv);
-  cv::Mat sad_opencv = SAD(opencv_disparities, gt);
-  std::cout << cv::mean(sad_opencv) << std::endl;
-  cv::imwrite("sad_opencv.png", sad_opencv);
-  cv::Mat ssim_opencv = MSSIM(opencv_disparities, gt);
-  std::cout << cv::mean(ssim_opencv) << std::endl;
-  cv::imwrite("ssim_opencv.png", ssim_opencv);
-  cv::Mat ncc_opencv = NCC(opencv_disparities, gt);
-  std::cout << cv::mean(ncc_opencv) << std::endl;
+  MAD(opencv_disparities, gt, outOpenCV.str());
+  SAD(opencv_disparities, gt, outOpenCV.str());
+  MSSIM(opencv_disparities, gt, outOpenCV.str());
+  NCC(opencv_disparities, gt);
 
   // reconstruction Naive
   Disparity2PointCloud(
-    output_file + "_naive",
+    outNaive.str(),
     height, width, naive_disparities,
     window_size, dmin, baseline, focal_length, image_color);
 
   // reconstruction DP
   Disparity2PointCloud(
-    output_file + "_dp",
+    outDP.str(),
     height, width, dp_disparities,
     window_size, dmin, baseline, focal_length, image_color);
 
   // reconstruction OpenCV
   Disparity2PointCloud(
-    output_file + "_opencv",
+    outOpenCV.str(),
     height, width, opencv_disparities,
     window_size, dmin, baseline, focal_length, image_color);
-
-  // cv::namedWindow("DP", cv::WINDOW_AUTOSIZE);
-  // cv::imshow("DP", dp_disparities);
-
-  // cv::namedWindow("Naive", cv::WINDOW_AUTOSIZE);
-  // cv::imshow("Naive", naive_disparities);
-
-  // cv::namedWindow("OpenCV", cv::WINDOW_AUTOSIZE);
-  // // cv::imshow("OpenCV", opencv_disparities);
-  // cv::imshow("OpenCV", mad(opencv_disparities, cv::imread("../data/art_disp_1.png", cv::IMREAD_GRAYSCALE)));
-  // std::cout << cv::mean(mad(opencv_disparities, cv::imread("../data/art_disp_1.png", cv::IMREAD_GRAYSCALE))) << std::endl;
-  
-  // cv::waitKey(0);
 
   return 0;
 }
@@ -378,23 +342,22 @@ void StereoEstimation_OpenCV(
   cv::minMaxLoc(disp, &minVal, &maxVal);
   disp.convertTo(opencv_disparities, CV_8UC1, 255./(maxVal - minVal));
 
-  std::cout << "Calculating disparities for the DP approach... Done.\r" << std::flush;
+  std::cout << "Calculating disparities for the OpenCV approach... Done.\r" << std::flush;
   std::cout << std::endl;
 }
 
-cv::Mat MAD(const cv::Mat& disp_est, const cv::Mat& disp_gt)
+void MAD(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
 {
   // MAD:
-  cv::Mat tmp;
-  cv::absdiff(disp_est, disp_gt, tmp);
-  cv::normalize(tmp, tmp, 255, 0, cv::NORM_MINMAX);
-  return tmp;
+  cv::Mat mad;
+  cv::absdiff(disp_est, disp_gt, mad);
+  cv::normalize(mad, mad, 255, 0, cv::NORM_MINMAX);
 
-  // NCC: template matching
-  // SSIM: c++ opencv contrib
+  std::cout << "MAD mean: " << cv::mean(mad) << std::endl;
+  cv::imwrite(output_file + "_mad.png", mad);
 }
 
-cv::Mat SAD(const cv::Mat& disp_est, const cv::Mat& disp_gt)
+void SAD(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
 {
   int height = disp_est.rows;
   int width = disp_est.cols;
@@ -408,10 +371,12 @@ cv::Mat SAD(const cv::Mat& disp_est, const cv::Mat& disp_gt)
     }
   }
   cv::normalize(ssd, ssd, 255, 0, cv::NORM_MINMAX);
-  return ssd;
+
+  std::cout << "SAD mean: " << cv::mean(ssd) << std::endl;
+  cv::imwrite(output_file + "_sad.png", ssd);
 }
 
-cv::Mat NCC(const cv::Mat& disp_est, const cv::Mat& disp_gt)
+void NCC(const cv::Mat& disp_est, const cv::Mat& disp_gt)
 {
   int height = disp_est.rows;
   int width = disp_est.cols;
@@ -424,18 +389,18 @@ cv::Mat NCC(const cv::Mat& disp_est, const cv::Mat& disp_gt)
 
   cv::matchTemplate(float_gt, float_est, ncc, cv::TM_CCORR_NORMED);
 
-  return ncc;
+  std::cout << "NCC mean: " << cv::mean(ncc) << std::endl;
 }
 
 // OpenCV Implementation
-cv::Mat MSSIM(const cv::Mat& i1, const cv::Mat& i2)
+void MSSIM(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
 {
   const double C1 = 6.5025, C2 = 58.5225;
 
   int d = CV_32F;
   cv::Mat I1, I2;
-  i1.convertTo(I1, d); // cannot calculate on one byte large values
-  i2.convertTo(I2, d);
+  disp_est.convertTo(I1, d); // cannot calculate on one byte large values
+  disp_gt.convertTo(I2, d);
   cv::Mat I2_2 = I2.mul(I2); // I2^2
   cv::Mat I1_2 = I1.mul(I1); // I1^2
   cv::Mat I1_I2 = I1.mul(I2); // I1 * I2
@@ -466,7 +431,9 @@ cv::Mat MSSIM(const cv::Mat& i1, const cv::Mat& i2)
   cv::divide(t3, t1, ssim_map); // ssim_map =  t3./t1;
   // cv::Scalar mssim = cv::mean(ssim_map); // mssim = average of ssim map
   cv::normalize(ssim_map, ssim_map, 255, 0, cv::NORM_MINMAX);
-  return ssim_map;
+
+  std::cout << "SSIM mean: " << cv::mean(ssim_map) << std::endl;
+  cv::imwrite(output_file + "_ssim.png", ssim_map);
 }
 
 pcl::visualization::PCLVisualizer::Ptr pointCloudVisualization (pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud, pcl::PointCloud<pcl::Normal>::ConstPtr normals)
