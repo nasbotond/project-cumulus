@@ -22,7 +22,7 @@ void StereoEstimation_OpenCV(
 
 void MAD(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file);
 
-void SAD(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file);
+void MSE(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file);
 
 void NCC(const cv::Mat& disp_est, const cv::Mat& disp_gt);
 

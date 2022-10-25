@@ -129,19 +129,38 @@ int main(int argc, char** argv)
   outOpenCV << output_file << "_opencv";
   cv::imwrite(outOpenCV.str()+"_disp.png", opencv_disparities);
 
+  // Normalize all disparities to 0-255
+  // double minVal; double maxVal;
+  // cv::minMaxLoc(naive_disparities, &minVal, &maxVal);
+
+  // std::cout << minVal << std::endl;
+  // std::cout << maxVal << std::endl;
+
+  // cv::minMaxLoc(dp_disparities, &minVal, &maxVal);
+
+  // std::cout << minVal << std::endl;
+  // std::cout << maxVal << std::endl;
+
+  // cv::minMaxLoc(opencv_disparities, &minVal, &maxVal);
+
+  // std::cout << minVal << std::endl;
+  // std::cout << maxVal << std::endl;
+
+  // cv::normalize(gt, gt, 255./(maxVal-minVal), 0, cv::NORM_MINMAX);
+
   // compare and get similarity measures
   MAD(naive_disparities, gt, outNaive.str());
-  SAD(naive_disparities, gt, outNaive.str());
+  MSE(naive_disparities, gt, outNaive.str());
   MSSIM(naive_disparities, gt, outNaive.str());
   NCC(naive_disparities, gt);
 
   MAD(dp_disparities, gt, outDP.str());
-  SAD(dp_disparities, gt, outDP.str());
+  MSE(dp_disparities, gt, outDP.str());
   MSSIM(dp_disparities, gt, outDP.str());
   NCC(dp_disparities, gt);
 
   MAD(opencv_disparities, gt, outOpenCV.str());
-  SAD(opencv_disparities, gt, outOpenCV.str());
+  MSE(opencv_disparities, gt, outOpenCV.str());
   MSSIM(opencv_disparities, gt, outOpenCV.str());
   NCC(opencv_disparities, gt);
 
@@ -161,6 +180,12 @@ int main(int argc, char** argv)
   Disparity2PointCloud(
     outOpenCV.str(),
     height, width, opencv_disparities,
+    window_size, dmin, baseline, focal_length, image_color);
+
+    // reconstruction GT
+  Disparity2PointCloud(
+    output_file+"_gt",
+    height, width, gt,
     window_size, dmin, baseline, focal_length, image_color);
 
   return 0;
@@ -243,7 +268,7 @@ void StereoEstimation_DP(
       // for (int j = half_window_size; j < width - half_window_size; ++j) // right image
       for (int j = i; j < width - half_window_size; ++j)
       {
-        // options: SSD, SAD, ...
+        // options: SSD, MSE, ...
         float sum = 0;
 
         for(int u = -half_window_size; u <= half_window_size; ++u)
@@ -252,7 +277,7 @@ void StereoEstimation_DP(
           {
             float i1 = static_cast<float>(l_image.at<uchar>(y_0 + u, i + v)); // left image
             float i2 = static_cast<float>(r_image.at<uchar>(y_0 + u, j + v)); // right image
-            sum += std::abs(i1-i2); // SAD
+            sum += std::abs(i1-i2); // MSE
             // sum += (i1-i2)*(i1-i2); // SSD
           }
         }
@@ -295,23 +320,23 @@ void StereoEstimation_DP(
     {
         switch (M.at<uchar>(li, ri))
         {
-            case 0:
-                dp_disparities.at<uchar>(y_0 - half_window_size, col) = abs(li - ri);
-                ri--;
-                li--;
-                col--;
-                break;
-            case 1:
-                li--;
-                break;
-            case 2:
-                ri--;
-                break;
+          case 0:
+              dp_disparities.at<uchar>(y_0 - half_window_size, col) = abs(li - ri);
+              ri--;
+              li--;
+              col--;
+              break;
+          case 1:
+              li--;
+              break;
+          case 2:
+              ri--;
+              break;
         }
     }
   }
 
-  // cv::normalize(dp_disparities, dp_disparities, 255, 0, cv::NORM_MINMAX);
+  cv::normalize(dp_disparities, dp_disparities, 255, 0, cv::NORM_MINMAX);
 
   std::cout << "Calculating disparities for the DP approach... Done.\r" << std::flush;
   std::cout << std::endl;
@@ -325,7 +350,7 @@ void StereoEstimation_OpenCV(
   cv::Mat disp; // Disparity
   cv::Ptr<cv::StereoSGBM> stereo = cv::StereoSGBM::create();
 
-  int numberOfDisparities = 128;
+  int numberOfDisparities = 63;
   stereo->setMinDisparity(0);
   stereo->setNumDisparities(numberOfDisparities);
 	stereo->setBlockSize(window_size);
@@ -334,13 +359,13 @@ void StereoEstimation_OpenCV(
   stereo->setMode(cv::StereoSGBM::MODE_HH);
 
   std::cout
-      << "Calculating disparities for the OpenCV approach... "
+      << "Calculating disparities for the OpenCV approach... " << "%\r"
       << std::flush;
 
   double minVal; double maxVal;
   stereo->compute(r_image, l_image, disp); // images flipped for some reason?
   cv::minMaxLoc(disp, &minVal, &maxVal);
-  disp.convertTo(opencv_disparities, CV_8UC1, 255./(maxVal - minVal));
+  disp.convertTo(opencv_disparities, CV_8UC1, 255./(maxVal - minVal)); // scale to 0-255
 
   std::cout << "Calculating disparities for the OpenCV approach... Done.\r" << std::flush;
   std::cout << std::endl;
@@ -351,13 +376,13 @@ void MAD(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& out
   // MAD:
   cv::Mat mad;
   cv::absdiff(disp_est, disp_gt, mad);
-  cv::normalize(mad, mad, 255, 0, cv::NORM_MINMAX);
+  // cv::normalize(mad, mad, 255, 0, cv::NORM_MINMAX);
 
   std::cout << "MAD mean: " << cv::mean(mad) << std::endl;
   cv::imwrite(output_file + "_mad.png", mad);
 }
 
-void SAD(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
+void MSE(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
 {
   int height = disp_est.rows;
   int width = disp_est.cols;
@@ -367,12 +392,12 @@ void SAD(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& out
   {
     for (int j = 0; j < width; ++j)
     {
-      ssd.at<uchar>(i, j) = std::abs(pow((disp_gt.at<uchar>(i, j) - disp_est.at<uchar>(i, j)), 2));
+      ssd.at<uchar>(i, j) = pow((disp_gt.at<uchar>(i, j) - disp_est.at<uchar>(i, j)), 2);
     }
   }
-  cv::normalize(ssd, ssd, 255, 0, cv::NORM_MINMAX);
+  // cv::normalize(ssd, ssd, 255, 0, cv::NORM_MINMAX);
 
-  std::cout << "SAD mean: " << cv::mean(ssd) << std::endl;
+  std::cout << "MSE mean: " << cv::mean(ssd) << std::endl;
   cv::imwrite(output_file + "_sad.png", ssd);
 }
 
@@ -430,9 +455,12 @@ void MSSIM(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& o
   cv::Mat ssim_map;
   cv::divide(t3, t1, ssim_map); // ssim_map =  t3./t1;
   // cv::Scalar mssim = cv::mean(ssim_map); // mssim = average of ssim map
-  cv::normalize(ssim_map, ssim_map, 255, 0, cv::NORM_MINMAX);
-
   std::cout << "SSIM mean: " << cv::mean(ssim_map) << std::endl;
+
+  double minVal; double maxVal;
+  cv::minMaxLoc(ssim_map, &minVal, &maxVal);
+
+  cv::normalize(ssim_map, ssim_map, 255./(maxVal-minVal), 0, cv::NORM_MINMAX);
   cv::imwrite(output_file + "_ssim.png", ssim_map);
 }
 
@@ -643,8 +671,3 @@ void Disparity2PointCloud(
   //   std::this_thread::sleep_for(100ms);
   // }
 }
-
-// compute similarity metrics between the ground truth disparity provided in the middlebury dataset and the one that you computed
-// metrics to use: SSD, SSIM, NCC (normalized cross correlation)
-// sum of squared diffrences
-// also look out how the ground truth disparity maps are scaled
