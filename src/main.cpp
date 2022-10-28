@@ -20,27 +20,21 @@ using namespace std::chrono_literals;
 
 int main(int argc, char** argv) 
 {
-
-  ////////////////
-  // Parameters //
-  ////////////////
-
   // camera setup parameters
   const double focal_length = 3740;
   const double baseline = 160;
 
-  ///////////////////////////
-  // Commandline arguments //
-  ///////////////////////////
-
+  // check if correct number of parameters are given
   if (argc < 8) 
   {
     std::cerr << "Usage: " << argv[0] << " LEFT_IMAGE RIGHT_IMAGE GT_IMAGE OUTPUT_FILE WINDOW_SIZE LAMBDA DMIN" << std::endl;
     return 1;
   }
 
+  // needed for coloring the point cloud
   cv::Mat image_color = cv::imread(argv[2], cv::IMREAD_COLOR);
 
+  // read image files and set variables
   cv::Mat l_image = cv::imread(argv[1], cv::IMREAD_GRAYSCALE);
   cv::Mat r_image = cv::imread(argv[2], cv::IMREAD_GRAYSCALE);
   cv::Mat gt = cv::imread(argv[3], cv::IMREAD_GRAYSCALE);
@@ -70,20 +64,17 @@ int main(int argc, char** argv)
   std::cout << "output filename = " << argv[4] << std::endl;
   std::cout << "-------------------------------------------------" << std::endl;
 
+  // image dimensions
   int height = r_image.size().height;
   int width = r_image.size().width;
-
-  ////////////////////
-  // Reconstruction //
-  ////////////////////
 
   // disparity images
   cv::Mat naive_disparities = cv::Mat::zeros(height, width, CV_8UC1);
   cv::Mat dp_disparities = cv::Mat::zeros(height, width, CV_8UC1);
   cv::Mat opencv_disparities = cv::Mat::zeros(height, width, CV_8UC1);
 
+  // disparity calculations with execution time measured
   auto startNaive = std::chrono::steady_clock::now();
-
   StereoEstimation_Naive(
     window_size, dmin, height, width,
     r_image, l_image,
@@ -93,7 +84,6 @@ int main(int argc, char** argv)
   std::cout << "Naive approach elapsed time in milliseconds: " << std::chrono::duration_cast<std::chrono::milliseconds>(endNaive - startNaive).count() << " ms" << std::endl;
 
   auto startDP = std::chrono::steady_clock::now();
-
   StereoEstimation_DP(
     window_size, dmin, height, width, lambda,
     r_image, l_image,
@@ -103,7 +93,6 @@ int main(int argc, char** argv)
   std::cout << "DP approach elapsed time in milliseconds: " << std::chrono::duration_cast<std::chrono::milliseconds>(endDP - startDP).count() << " ms" << std::endl;
 
   auto startOpenCV = std::chrono::steady_clock::now();
-
   StereoEstimation_OpenCV(
     window_size, dmin,
     r_image, l_image,
@@ -112,11 +101,7 @@ int main(int argc, char** argv)
   auto endOpenCV = std::chrono::steady_clock::now();
   std::cout << "OpenCV approach elapsed time in milliseconds: " << std::chrono::duration_cast<std::chrono::milliseconds>(endOpenCV - startOpenCV).count() << " ms" << std::endl;
 
-  ////////////
-  // Output //
-  ////////////
-
-  // save / display images
+  // save disparity images
   std::stringstream outNaive;
   outNaive << output_file << "_naive";
   cv::imwrite(outNaive.str()+"_disp.png", naive_disparities);
@@ -148,7 +133,7 @@ int main(int argc, char** argv)
 
   // cv::normalize(gt, gt, 255./(maxVal-minVal), 0, cv::NORM_MINMAX);
 
-  // compare and get similarity measures
+  // compare and get similarity measures, save difference images
   MAD(naive_disparities, gt, outNaive.str());
   MSE(naive_disparities, gt, outNaive.str());
   MSSIM(naive_disparities, gt, outNaive.str());
@@ -164,25 +149,25 @@ int main(int argc, char** argv)
   MSSIM(opencv_disparities, gt, outOpenCV.str());
   NCC(opencv_disparities, gt);
 
-  // reconstruction Naive
+  // 3D point cloud reconstruction using Naive
   Disparity2PointCloud(
     outNaive.str(),
     height, width, naive_disparities,
     window_size, dmin, baseline, focal_length, image_color);
 
-  // reconstruction DP
+  // 3D point cloud reconstruction using DP
   Disparity2PointCloud(
     outDP.str(),
     height, width, dp_disparities,
     window_size, dmin, baseline, focal_length, image_color);
 
-  // reconstruction OpenCV
+  // 3D point cloud reconstruction using OpenCV
   Disparity2PointCloud(
     outOpenCV.str(),
     height, width, opencv_disparities,
     window_size, dmin, baseline, focal_length, image_color);
 
-    // reconstruction GT
+  // 3D point cloud reconstruction using GT (for visual comparison)
   Disparity2PointCloud(
     output_file+"_gt",
     height, width, gt,
@@ -268,7 +253,6 @@ void StereoEstimation_DP(
       // for (int j = half_window_size; j < width - half_window_size; ++j) // right image
       for (int j = i; j < width - half_window_size; ++j)
       {
-        // options: SSD, MSE, ...
         float sum = 0;
 
         for(int u = -half_window_size; u <= half_window_size; ++u)
@@ -277,7 +261,7 @@ void StereoEstimation_DP(
           {
             float i1 = static_cast<float>(l_image.at<uchar>(y_0 + u, i + v)); // left image
             float i2 = static_cast<float>(r_image.at<uchar>(y_0 + u, j + v)); // right image
-            sum += std::abs(i1-i2); // MSE
+            sum += std::abs(i1-i2); // absolute difference
             // sum += (i1-i2)*(i1-i2); // SSD
           }
         }
@@ -290,6 +274,7 @@ void StereoEstimation_DP(
     cv::Mat C = cv::Mat::zeros(width, width, CV_32FC1);
     cv::Mat M = cv::Mat::zeros(width, width, CV_8UC1); // match 0, left-occlusion 1, right-occlusion 2
 
+    // fill first row and column of C and M matrices
     for(int x = 1; x < width; ++x)
     {
       C.at<float>(0, x) = x*static_cast<float>(lambda);
@@ -299,6 +284,7 @@ void StereoEstimation_DP(
       M.at<uchar>(x, 0) = 2;
     }
 
+    // fill C and M matrices
     for(int r = 1; r < width - 1; ++r)
     {
       for(int c = 1; c < width - 1; ++c)
@@ -313,6 +299,7 @@ void StereoEstimation_DP(
       }
     }
 
+    // backtrack to get optimal disparities
     int ri = width - 1;
     int li = width - 1;
     int col = width;
@@ -350,6 +337,7 @@ void StereoEstimation_OpenCV(
   cv::Mat disp; // Disparity
   cv::Ptr<cv::StereoSGBM> stereo = cv::StereoSGBM::create();
 
+  // set SGBM parameters
   int numberOfDisparities = 63;
   stereo->setMinDisparity(0);
   stereo->setNumDisparities(numberOfDisparities);
@@ -371,9 +359,9 @@ void StereoEstimation_OpenCV(
   std::cout << std::endl;
 }
 
+// Mean Absolute Difference
 void MAD(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
 {
-  // MAD:
   cv::Mat mad;
   cv::absdiff(disp_est, disp_gt, mad);
   // cv::normalize(mad, mad, 255, 0, cv::NORM_MINMAX);
@@ -382,6 +370,7 @@ void MAD(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& out
   cv::imwrite(output_file + "_mad.png", mad);
 }
 
+// Mean Squared Error
 void MSE(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
 {
   int height = disp_est.rows;
@@ -401,6 +390,7 @@ void MSE(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& out
   cv::imwrite(output_file + "_sad.png", ssd);
 }
 
+// Normalized Cross Correlation
 void NCC(const cv::Mat& disp_est, const cv::Mat& disp_gt)
 {
   int height = disp_est.rows;
@@ -417,7 +407,7 @@ void NCC(const cv::Mat& disp_est, const cv::Mat& disp_gt)
   std::cout << "NCC mean: " << cv::mean(ncc) << std::endl;
 }
 
-// OpenCV Implementation
+// OpenCV Implementation of Structural Similarity Measure
 void MSSIM(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& output_file)
 {
   const double C1 = 6.5025, C2 = 58.5225;
@@ -464,6 +454,7 @@ void MSSIM(const cv::Mat& disp_est, const cv::Mat& disp_gt, const std::string& o
   cv::imwrite(output_file + "_ssim.png", ssim_map);
 }
 
+// PCL point cloud visualizer
 pcl::visualization::PCLVisualizer::Ptr pointCloudVisualization (pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr cloud, pcl::PointCloud<pcl::Normal>::ConstPtr normals)
 {
   pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
@@ -476,15 +467,17 @@ pcl::visualization::PCLVisualizer::Ptr pointCloudVisualization (pcl::PointCloud<
   return (viewer);
 }
 
-void getNormalVectors(cv::Mat& points, cv::Mat& normals)
+// estimate normal vectors for oriented point cloud
+void getNormalVectors(cv::Mat& points, cv::Mat& normals, const int& window_size)
 {
-  int hw = 5/2;
+  int hw = window_size/2; // window size of 5, hw is half window size
 
+  // for each point
   for(int i = hw; i < points.rows - hw; ++i)
   {
     for(int j = hw; j < points.cols - hw; ++j)
     {
-
+      // get window of points
       std::vector<cv::Point3f> pts;
       for(int a = -hw; a <= hw; ++a)
       {
@@ -518,7 +511,7 @@ void getNormalVectors(cv::Mat& points, cv::Mat& normals)
       // X*l = 0 (homogenous equation)
       cv::Mat X(num, 3, CV_32F);
 
-      // get matrix X
+      // get matrix X (plane matrix)
       for (int idx = 0; idx < num; idx++)
       {
         cv::Point3d pt = pts.at(idx);
@@ -528,7 +521,6 @@ void getNormalVectors(cv::Mat& points, cv::Mat& normals)
       }
 
       // normal vector l -> eigenvector of X^T X corresponding to the least eigenvalues
-
       cv::Mat mtx = X.t() * X;
       cv::Mat evals, evecs;
 
@@ -538,12 +530,12 @@ void getNormalVectors(cv::Mat& points, cv::Mat& normals)
       float ny = evecs.at<float>(2, 1);
       float nz = evecs.at<float>(2, 2);
 
-      // See if we need to flip any plane normals
+      // check if we need to flip any plane normals towards viewpoint
       float vp_x = 0 - static_cast<float>(points.at<cv::Vec3f>(i, j)[0]);
       float vp_y = 0 - static_cast<float>(points.at<cv::Vec3f>(i, j)[1]);
       float vp_z = 0 - static_cast<float>(points.at<cv::Vec3f>(i, j)[2]);
 
-      // Dot product between the (viewpoint - point) and the plane normal
+      // dot product between the (viewpoint - point) and the plane normal
       float cos_theta = (vp_x * nx + vp_y * ny + vp_z * nz);
 
       normals.at<cv::Vec3f>(i, j) = cos_theta < 0 ? cv::Vec3f(-nx, -ny, -nz) : cv::Vec3f(nx, ny, nz);
@@ -551,17 +543,19 @@ void getNormalVectors(cv::Mat& points, cv::Mat& normals)
   }
 }
 
+// create and write .ply file for point clouds
 void writePLY(const std::string& output_file, cv::Mat points, cv::Mat normals, cv::Mat colors)
 {
   int rows = points.rows;
   int cols = points.cols;
 
-  int triangleSize = 3;
+  int triangleSize = 3; // size of triangles for triangulated surface
 
   std::stringstream out3d;
   out3d << output_file << ".ply";
   std::ofstream outfile(out3d.str());
   
+  // header
   outfile <<"ply\n";
   outfile <<"format ascii 1.0\n";
   outfile <<"element vertex "<< rows*cols <<std::endl;
@@ -578,6 +572,7 @@ void writePLY(const std::string& output_file, cv::Mat points, cv::Mat normals, c
   outfile <<"property list uchar int vertex_index\n";
   outfile <<"end_header\n";
   
+  // write point vertices, normals, and colors
   for (int r = 0; r < rows; r++)
   {
     for(int c = 0; c < cols; c++)
@@ -590,6 +585,7 @@ void writePLY(const std::string& output_file, cv::Mat points, cv::Mat normals, c
     }
   }
 
+  // determine and write faces
   for (int r = triangleSize; r <= triangleSize*((rows-1)/triangleSize); r=r+triangleSize)
   {
     for(int c = 0; c < triangleSize*((cols-1)/triangleSize); c=c+triangleSize)
@@ -602,6 +598,7 @@ void writePLY(const std::string& output_file, cv::Mat points, cv::Mat normals, c
   outfile.close();
 }
 
+// calculate 3D point from disparity map
 void Disparity2PointCloud(
   const std::string& output_file,
   int height, int width, cv::Mat& disparities,
@@ -619,7 +616,7 @@ void Disparity2PointCloud(
     std::cout << "Reconstructing 3D point cloud from disparities... " << std::ceil(((i) / static_cast<double>(height - window_size + 1)) * 100) << "%\r" << std::flush;
     for (int j = 0; j < width - window_size; ++j)
     {
-      if (disparities.at<uchar>(i, j) + dmin == 0) continue;
+      if(disparities.at<uchar>(i, j) + dmin == 0) continue;
 
       const double u1 = j-(width/2);
       const double d = static_cast<double>(disparities.at<uchar>(i, j)) + dmin;
@@ -630,11 +627,13 @@ void Disparity2PointCloud(
       const double X = -1*(baseline*(u1+u2))/(2*d);
       const double Y = baseline*(v)/d;
 
-      pointsMat.at<cv::Vec3f>(i, j) = cv::Vec3f(X, Y, Z);
+      pointsMat.at<cv::Vec3f>(i, j) = cv::Vec3f(-X, Y, Z);
+
+      // set color of point
       cv::Vec3b color = image_color.at<cv::Vec3b>(i, j);
       colorsMat.at<cv::Vec3b>(i, j) = cv::Vec3b(color.val[2], color.val[1], color.val[0]);
 
-      // populate the cloud
+      // populate the cloud for PCL visualization and normal calculation
       pcl::PointXYZRGB basic_point;
       basic_point.x = X;
       basic_point.y = Y;
@@ -649,8 +648,10 @@ void Disparity2PointCloud(
   std::cout << "Reconstructing 3D point cloud from disparities... Done.\r" << std::flush;
   std::cout << std::endl;
 
-  getNormalVectors(pointsMat, normalsMat);
+  // estimate normal vectors
+  getNormalVectors(pointsMat, normalsMat, 5);
 
+  // estimate normal vectors using PCL library
   // cloud->width = cloud->size ();
   // cloud->height = 1;
 
@@ -662,8 +663,10 @@ void Disparity2PointCloud(
   // ne.setRadiusSearch (5);
   // ne.compute (*cloud_normals1);
   
+  // write 3D point cloud file
   writePLY(output_file, pointsMat, normalsMat, colorsMat);
 
+  // visualize PCL point cloud and normals
   // pcl::visualization::PCLVisualizer::Ptr viewer = pointCloudVisualization(cloud, cloud_normals1);
   // while (!viewer->wasStopped())
   // {
