@@ -74,23 +74,23 @@ int main(int argc, char** argv)
   cv::Mat opencv_disparities = cv::Mat::zeros(height, width, CV_8UC1);
 
   // disparity calculations with execution time measured
-  auto startNaive = std::chrono::steady_clock::now();
-  StereoEstimation_Naive(
-    window_size, dmin, height, width,
-    r_image, l_image,
-    naive_disparities);
+  // auto startNaive = std::chrono::steady_clock::now();
+  // StereoEstimation_Naive(
+  //   window_size, dmin, height, width,
+  //   r_image, l_image,
+  //   naive_disparities);
 
-  auto endNaive = std::chrono::steady_clock::now();
-  std::cout << "Naive approach elapsed time in milliseconds: " << std::chrono::duration_cast<std::chrono::milliseconds>(endNaive - startNaive).count() << " ms" << std::endl;
+  // auto endNaive = std::chrono::steady_clock::now();
+  // std::cout << "Naive approach elapsed time in milliseconds: " << std::chrono::duration_cast<std::chrono::milliseconds>(endNaive - startNaive).count() << " ms" << std::endl;
 
-  auto startDP = std::chrono::steady_clock::now();
-  StereoEstimation_DP(
-    window_size, dmin, height, width, lambda,
-    r_image, l_image,
-    dp_disparities);
+  // auto startDP = std::chrono::steady_clock::now();
+  // StereoEstimation_DP(
+  //   window_size, dmin, height, width, lambda,
+  //   r_image, l_image,
+  //   dp_disparities);
 
-  auto endDP = std::chrono::steady_clock::now();
-  std::cout << "DP approach elapsed time in milliseconds: " << std::chrono::duration_cast<std::chrono::milliseconds>(endDP - startDP).count() << " ms" << std::endl;
+  // auto endDP = std::chrono::steady_clock::now();
+  // std::cout << "DP approach elapsed time in milliseconds: " << std::chrono::duration_cast<std::chrono::milliseconds>(endDP - startDP).count() << " ms" << std::endl;
 
   auto startOpenCV = std::chrono::steady_clock::now();
   StereoEstimation_OpenCV(
@@ -102,13 +102,13 @@ int main(int argc, char** argv)
   std::cout << "OpenCV approach elapsed time in milliseconds: " << std::chrono::duration_cast<std::chrono::milliseconds>(endOpenCV - startOpenCV).count() << " ms" << std::endl;
 
   // save disparity images
-  std::stringstream outNaive;
-  outNaive << output_file << "_naive";
-  cv::imwrite(outNaive.str()+"_disp.png", naive_disparities);
+  // std::stringstream outNaive;
+  // outNaive << output_file << "_naive";
+  // cv::imwrite(outNaive.str()+"_disp.png", naive_disparities);
 
-  std::stringstream outDP;
-  outDP << output_file << "_dp";
-  cv::imwrite(outDP.str()+"_disp.png", dp_disparities);
+  // std::stringstream outDP;
+  // outDP << output_file << "_dp";
+  // cv::imwrite(outDP.str()+"_disp.png", dp_disparities);
 
   std::stringstream outOpenCV;
   outOpenCV << output_file << "_opencv";
@@ -134,15 +134,15 @@ int main(int argc, char** argv)
   // cv::normalize(gt, gt, 255./(maxVal-minVal), 0, cv::NORM_MINMAX);
 
   // compare and get similarity measures, save difference images
-  MAD(naive_disparities, gt, outNaive.str());
-  MSE(naive_disparities, gt, outNaive.str());
-  MSSIM(naive_disparities, gt, outNaive.str());
-  NCC(naive_disparities, gt);
+  // MAD(naive_disparities, gt, outNaive.str());
+  // MSE(naive_disparities, gt, outNaive.str());
+  // MSSIM(naive_disparities, gt, outNaive.str());
+  // NCC(naive_disparities, gt);
 
-  MAD(dp_disparities, gt, outDP.str());
-  MSE(dp_disparities, gt, outDP.str());
-  MSSIM(dp_disparities, gt, outDP.str());
-  NCC(dp_disparities, gt);
+  // MAD(dp_disparities, gt, outDP.str());
+  // MSE(dp_disparities, gt, outDP.str());
+  // MSSIM(dp_disparities, gt, outDP.str());
+  // NCC(dp_disparities, gt);
 
   MAD(opencv_disparities, gt, outOpenCV.str());
   MSE(opencv_disparities, gt, outOpenCV.str());
@@ -150,16 +150,16 @@ int main(int argc, char** argv)
   NCC(opencv_disparities, gt);
 
   // 3D point cloud reconstruction using Naive
-  Disparity2PointCloud(
-    outNaive.str(),
-    height, width, naive_disparities,
-    window_size, dmin, baseline, focal_length, image_color);
+  // Disparity2PointCloud(
+  //   outNaive.str(),
+  //   height, width, naive_disparities,
+  //   window_size, dmin, baseline, focal_length, image_color);
 
-  // 3D point cloud reconstruction using DP
-  Disparity2PointCloud(
-    outDP.str(),
-    height, width, dp_disparities,
-    window_size, dmin, baseline, focal_length, image_color);
+  // // 3D point cloud reconstruction using DP
+  // Disparity2PointCloud(
+  //   outDP.str(),
+  //   height, width, dp_disparities,
+  //   window_size, dmin, baseline, focal_length, image_color);
 
   // 3D point cloud reconstruction using OpenCV
   Disparity2PointCloud(
@@ -459,9 +459,9 @@ pcl::visualization::PCLVisualizer::Ptr pointCloudVisualization (pcl::PointCloud<
 {
   pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
   viewer->setBackgroundColor (0, 0, 0);
-  viewer->addPointCloud<pcl::PointXYZRGB> (cloud, "sample cloud");
-  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "sample cloud");
-  viewer->addPointCloudNormals<pcl::PointXYZRGB, pcl::Normal> (cloud, normals, 50, 10, "normals");
+  viewer->addPointCloud<pcl::PointXYZRGB> (cloud, "Cloud");
+  viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "Cloud");
+  viewer->addPointCloudNormals<pcl::PointXYZRGB, pcl::Normal> (cloud, normals, 50, 10, "normals"); // every 50 normal to display, normal magnitudes scaled by 10
   viewer->addCoordinateSystem (1.0);
   viewer->initCameraParameters ();
   return (viewer);
@@ -651,26 +651,25 @@ void Disparity2PointCloud(
   // estimate normal vectors
   getNormalVectors(pointsMat, normalsMat, 5);
 
-  // estimate normal vectors using PCL library
-  // cloud->width = cloud->size ();
-  // cloud->height = 1;
-
-  // pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
-  // ne.setInputCloud (cloud);
-  // pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB> ());
-  // ne.setSearchMethod (tree);
-  // pcl::PointCloud<pcl::Normal>::Ptr cloud_normals1 (new pcl::PointCloud<pcl::Normal>);
-  // ne.setRadiusSearch (5);
-  // ne.compute (*cloud_normals1);
-  
   // write 3D point cloud file
   writePLY(output_file, pointsMat, normalsMat, colorsMat);
 
+  // estimate normal vectors using PCL library (for visual comparison)
+  cloud->width = cloud->size ();
+  cloud->height = 1;
+  pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
+  ne.setInputCloud (cloud);
+  pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB> ());
+  ne.setSearchMethod (tree);
+  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals1 (new pcl::PointCloud<pcl::Normal>);
+  ne.setRadiusSearch (5);
+  ne.compute (*cloud_normals1);
+
   // visualize PCL point cloud and normals
-  // pcl::visualization::PCLVisualizer::Ptr viewer = pointCloudVisualization(cloud, cloud_normals1);
-  // while (!viewer->wasStopped())
-  // {
-  //   viewer->spinOnce (100);
-  //   std::this_thread::sleep_for(100ms);
-  // }
+  pcl::visualization::PCLVisualizer::Ptr viewer = pointCloudVisualization(cloud, cloud_normals1);
+  while (!viewer->wasStopped())
+  {
+    viewer->spinOnce (100);
+    std::this_thread::sleep_for(100ms);
+  }
 }
