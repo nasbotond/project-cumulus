@@ -14,4 +14,18 @@ This code compares three different disparity map calculation approaches, i.e., n
 
 ## Example Results
 
-![OpenCV Disp](example_results/7_opencv_disp.png)
+| ![Naive Disp](example_results/laundry_7_naive_disp.png) | 
+|:--:| 
+| *Disparity map calculated using Naive approach* |
+
+| ![DP Disp](example_results/laundry_7_dp_disp.png) | 
+|:--:| 
+| *Disparity map calculated using dynamic programming approach* |
+
+| ![OpenCV Disp](example_results/laundry_7_opencv_disp.png) | 
+|:--:| 
+| *Disparity map calculated using OpenCV SGBM approach* |
+
+| ![DP PC](example_results/pc_dp.png) | 
+|:--:| 
+| *Point cloud from disparity map calculated using dynamic programming approach* |
