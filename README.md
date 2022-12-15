@@ -3,6 +3,8 @@
 ## Description
 This code compares three different disparity map calculation approaches, i.e., naive approach, dynamic programming approach, and the built-in OpenCV StereoSGBM approach, to a ground truth disparity map. Using the disparity maps, the point clouds are reconstructed including an oriented point cloud and a rudimentary triangulated surface mesh.
 
+The algorithms are tested on the public Middlebury dataset.
+
 ## Requirements
 - Working C++ compiler (C++ 17 or greater)
 - CMake (version >= 2.8)
